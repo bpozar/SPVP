@@ -48,27 +48,72 @@ def get_credentials():
         print 'Storing credentials to ' + credential_path
     return credentials
 
+def initialize():
+    credentials = get_credentials()
+    service = build('calendar', 'v3', http=credentials.authorize(Http()))
+
+    return credentials, service
+
+def example_event():
+    event = {
+      'summary': 'Tomo event 15',
+      'location': '800 Howard St., San Francisco, CA 94103',
+      'description': 'A chance to hear more about Google\'s developer products.',
+      'start': {
+        'dateTime': '2015-06-21T09:00:00-07:00',
+        'timeZone': 'America/Los_Angeles',
+      },
+      'end': {
+        'dateTime': '2015-06-28T17:00:00-07:00',
+        'timeZone': 'America/Los_Angeles',
+      },
+      'recurrence': [
+        'RRULE:FREQ=DAILY;COUNT=2'
+      ],
+      'attendees': [
+        {'email': 'lpage@example.com'},
+        {'email': 'sbrin@example.com'},
+      ],
+      'reminders': {
+        'useDefault': False,
+        'overrides': [
+          {'method': 'email', 'minutes': 24 * 60},
+          {'method': 'sms', 'minutes': 10},
+        ],
+      },
+    }
+
+    return event
+
+def event_put(event, calendar_name, service):
+    return service.events().insert(calendarId=calendar_name, body=event).execute()
+
 def main():
     """Shows basic usage of the Google Calendar API.
 
     Creates a Google Calendar API service object and outputs a list of the next
     10 events on the user's calendar.
     """
-    credentials = get_credentials()
-    service = build('calendar', 'v3', http=credentials.authorize(Http()))
+    credentials, service = initialize()
 
-    now = datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
-    print 'Getting the upcoming 10 events'
-    eventsResult = service.events().list(
-        calendarId='primary', timeMin=now, maxResults=10, singleEvents=True,
-        orderBy='startTime').execute()
-    events = eventsResult.get('items', [])
+    json_event = example_event()
 
-    if not events:
-        print 'No upcoming events found.'
-    for event in events:
-        start = event['start'].get('dateTime', event['start'].get('date'))
-        print start, event['summary'].encode('utf-8')
+    event = event_put(json_event, 'primary', service) 
+    #service.events().insert(calendarId='primary', body=event).execute()
+    print 'Event created: %s' % (event.get('htmlLink'))
+
+    #now = datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
+    #print 'Getting the upcoming 10 events'
+    #eventsResult = service.events().list(
+    #    calendarId='primary', timeMin=now, maxResults=10, singleEvents=True,
+    #    orderBy='startTime').execute()
+    #events = eventsResult.get('items', [])
+
+    #if not events:
+    #    print 'No upcoming events found.'
+    #for event in events:
+    #    start = event['start'].get('dateTime', event['start'].get('date'))
+    #    print start, event['summary'].encode('utf-8')
 
 
 if __name__ == '__main__':
